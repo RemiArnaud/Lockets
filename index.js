@@ -15,11 +15,10 @@
   var fs = require('fs');
   var path = require('path');
 
-  var argv = optimist.usage('Usage: $0 --watch [file or directory to watch]')
-                     .demand(['watch'])
-                     .default('watch', '/tmp')
+  var argv = optimist.usage('Usage: $0 file file file')
                      .argv;
 
+  console.log("Argv="+JSON.stringify(argv._))
   // Directory to watch
   var logDir = argv.watch;
 
@@ -39,23 +38,35 @@
   }));
 
   // Other static content
-  app.use(connect['static'](baseDir));
+  app.use('/logs', connect['static'](baseDir));
 
 
   // Fetch list of files & start watching
-  require('./lib/list-files')(logDir, function(err, logFiles) {
+  //require('./lib/list-files')(logDir, function(err, logFiles) {
 
-    if(err) {
-      throw err;
-    }
+ // Fix the Array
+      var files = Array.prototype.sort.apply(argv._,[]);
+       var logFiles = [];
 
-    io.sockets.on('connection', require('./lib/io-handler')(logDir, logFiles));
+      files.forEach(function(file) {
+        //var filePath = path.join(logDir, file);
+        var isFile = fs.statSync(file).isFile();
+        if(isFile) {
+          logFiles.push(file);
+        }
+      });
+
+console.log('logfile=');
+console.log(logFiles)
+
+
+    io.sockets.on('connection', require('./lib/io-handler')('', logFiles));
 
     var port = parseInt(process.env.PORT || 8000, 10);
     httpServer.listen(port);
 
     console.log('Log Server running now \n\thttp://0.0.0.0:' + port + '/');
-  });
+  //});
 
   module.exports = httpServer;
 
